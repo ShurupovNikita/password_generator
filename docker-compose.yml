@@ -1,0 +1,10 @@
+version: "3.9"
+
+services:
+  password-checker:
+    build: .
+    image: password-checker-shurupov:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - PYTHONUNBUFFERED=1
