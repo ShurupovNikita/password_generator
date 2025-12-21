@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>ShurupPassword</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 24px; background: #f5f7fb; color: #1f2933; }
+    h1 { margin-bottom: 12px; }
+    .card { background: #fff; border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    label { display: block; margin: 8px 0 4px; font-weight: bold; }
+    input[type="text"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid #d0d7e2; border-radius: 6px; }
+    button { background: #2563eb; color: #fff; border: none; border-radius: 6px; padding: 10px 14px; cursor: pointer; margin-top: 10px; }
+    button:hover { background: #1e4fcf; }
+    .result { margin-top: 10px; background: #f1f5f9; border-radius: 8px; padding: 10px; font-size: 14px; }
+    .checks { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <h1>ShurupPasswordMasterGen</h1>
+
+  <div class="card">
+    <h3>Сгенерировать пароль</h3>
+    <label for="gen-length">Длина (4-128)</label>
+    <input id="gen-length" type="number" value="16" min="4" max="128">
+    <div class="checks">
+      <label><input id="gen-lower" type="checkbox" checked> строчные</label>
+      <label><input id="gen-upper" type="checkbox" checked> заглавные</label>
+      <label><input id="gen-digits" type="checkbox" checked> цифры</label>
+      <label><input id="gen-symbols" type="checkbox" checked> символы</label>
+    </div>
+    <button onclick="generatePassword()">Сгенерировать</button>
+    <div id="gen-result" class="result"></div>
+  </div>
+
+  <div class="card">
+    <h3>Проверить пароль</h3>
+    <label for="check-password">Пароль</label>
+    <input id="check-password" type="text" placeholder="Введите пароль для проверки">
+    <button onclick="checkPassword()">Проверить</button>
+    <div id="check-result" class="result"></div>
+  </div>
+
+  <script>
+    async function checkPassword() {
+      const password = document.getElementById('check-password').value || '';
+      const resEl = document.getElementById('check-result');
+      resEl.textContent = 'Проверяем...';
+      try {
+        const resp = await fetch('/api/check', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ password })
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Ошибка проверки');
+        resEl.innerHTML = `
+          <div>Длина: <b>${data.length}</b></div>
+          <div>Энтропия: <b>${data.entropy.toFixed(1)}</b> бит</div>
+          <div>Балл: <b>${data.score}/100</b></div>
+          <div>Уровень: <b>${data.level}</b></div>
+          <div>Рекомендации:<br>${data.recommendations.map(r => '- ' + r).join('<br>')}</div>
+        `;
+      } catch (err) {
+        resEl.textContent = 'Ошибка: ' + err.message;
+      }
+    }
+
+    async function generatePassword() {
+      const length = parseInt(document.getElementById('gen-length').value, 10);
+      const payload = {
+        length,
+        lower: document.getElementById('gen-lower').checked,
+        upper: document.getElementById('gen-upper').checked,
+        digits: document.getElementById('gen-digits').checked,
+        symbols: document.getElementById('gen-symbols').checked,
+      };
+      const resEl = document.getElementById('gen-result');
+      resEl.textContent = 'Генерация...';
+      try {
+        const resp = await fetch('/api/generate', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Ошибка генерации');
+        resEl.innerHTML = `<div>Пароль: <b>${data.password}</b></div>`;
+      } catch (err) {
+        resEl.textContent = 'Ошибка: ' + err.message;
+      }
+    }
+  </script>
+</body>
+</html>
